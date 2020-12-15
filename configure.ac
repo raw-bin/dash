@@ -140,12 +140,28 @@ if test "$ac_cv_func_signal" != yes; then
 				 [klibc has bsd_signal instead of signal])])
 fi
 
-dnl Check for stat64 (dietlibc/klibc).
-AC_CHECK_FUNC(stat64,, [
-	AC_DEFINE(fstat64, fstat, [64-bit operations are the same as 32-bit])
-	AC_DEFINE(lstat64, lstat, [64-bit operations are the same as 32-bit])
-	AC_DEFINE(stat64, stat, [64-bit operations are the same as 32-bit])
-])
+dnl Apparently macOS has deprecated stat64 and co since a while
+dnl However, the test for stat64 still succeeds (!?!) at least on Big Sur arm64
+dnl To workaround that bizarreness, let's use the 32-bit counterparts (which _are_ present) 
+dnl On other systems, check for stat64 as before
+case `uname -s 2>/dev/null` in
+    Darwin)
+	case `uname -m 2>/dev/null` in
+	    arm64)
+		AC_DEFINE(fstat64, fstat, [64-bit operations are the same as 32-bit])
+		AC_DEFINE(lstat64, lstat, [64-bit operations are the same as 32-bit])
+		AC_DEFINE(stat64, stat, [64-bit operations are the same as 32-bit])
+		;;
+	esac
+	;;
+    *)
+	AC_CHECK_FUNC(stat64,, [
+	    AC_DEFINE(fstat64, fstat, [64-bit operations are the same as 32-bit])
+	    AC_DEFINE(lstat64, lstat, [64-bit operations are the same as 32-bit])
+	    AC_DEFINE(stat64, stat, [64-bit operations are the same as 32-bit])
+	])
+	;;
+esac
 
 AC_CHECK_FUNC(glob64,, [
 	AC_DEFINE(glob64_t, glob_t, [64-bit operations are the same as 32-bit])
@@ -154,7 +170,7 @@ AC_CHECK_FUNC(glob64,, [
 		  [64-bit operations are the same as 32-bit])
 ])
 
-dnl OS X apparently has stat64 but not open64.
+dnl OS X doesn't have open64.
 AC_CHECK_FUNC(open64,, [
 	AC_DEFINE(open64, open, [64-bit operations are the same as 32-bit])
 	AC_DEFINE(readdir64, readdir,
